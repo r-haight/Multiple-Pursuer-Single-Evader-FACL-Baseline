@@ -136,6 +136,11 @@ class FACL:
             self.u_t = self.u_t + self.phi[l] * self.omega[l]
         self.u_t = self.u_t + self.noise #add noise to explore
 
+        # if(self.u_t>np.pi):
+        #     self.u_t = np.pi
+        # elif(self.u_t < -np.pi) :
+        #     self.u_t = -np.pi
+        # pass
 
     def calculate_prediction_error(self):
         self.temporal_difference = self.reward + self.gamma * self.v_t_1 - self.v_t
@@ -145,11 +150,11 @@ class FACL:
         pass
 
     @abc.abstractmethod
-    def get_reward(self):
+    def get_reward(self,coor):
         pass
 
     def mu(self, state: float, rule: list): # This is the triangular membership function
-        # print('state',state)
+        #print(state)
         #print(rule)
         if state <= rule[0]:
             f = 0
@@ -159,13 +164,13 @@ class FACL:
             f = (rule[2] - state) / (rule[2] - rule[1])
         elif state >= rule[2]:
             f = 0
-        # print(f)
+        #print(f)
         return f
 
     def generate_noise(self):
         self.noise = np.random.normal(0, self.sigma)
 
-    def iterate(self) :
+    def iterate(self, coor) :
         #print statements were added for debugging
         self.generate_noise()
         #print('noise : ', self.noise)
@@ -190,7 +195,7 @@ class FACL:
         #print(self.phi_next)
 
         # Step 6: get the reward for this iteration
-        self.reward = self.get_reward()
+        self.reward = self.get_reward(coor)
         #print('reward')
         #print(self.reward)
 
@@ -213,34 +218,6 @@ class FACL:
         self.phi = self.phi_next # the rules that fire for the next iteration
     pass
 
-    def complete_state_change(self):
-        #steps 1 to 5
-        self.generate_noise()
-
-        # Step 3 :  calculate the necessary action
-        self.calculate_ut()
-
-        # Step 4: calculate the value function at current iterate/time step
-        self.v_t = self.calculate_vt(self.phi)  # v_t = sum of self.phi[l] * self.zeta[l]
-
-        # Step 5: update the state of the system
-        self.update_state()
-        self.phi_next = self.update_phi()
-
-    def update_actor_and_critic(self):
-        #Steps 7 to 9
-        # Step 7: Calculate the expected value for the next step
-        self.v_t_1 = self.calculate_vt(self.phi_next)  # self.phi[l] * self.zeta[l]
-
-        # Step 8: calculate the temporal difference
-        self.calculate_prediction_error()
-
-        # Step 9: update the actor and critic functions
-        self.update_zeta()  # update the critic
-        self.update_omega()  # update the actor
-
-        self.phi = self.phi_next  # the rules that fire for the next iteration
-        pass
     def updates_after_an_epoch(self):
         self.sigma = 0.999 * self.sigma
         self.alpha = 0.999 * self.alpha
@@ -252,3 +229,45 @@ class FACL:
         # TO DO
         # essentially we wanna make a list of trainable parameters after training so we can load them in later
         pass
+
+
+
+
+
+
+    def select_and_execute_action(self):
+        self.generate_noise()
+        # print('noise : ', self.noise)
+        # Step 3 :  calculate the necessary action
+        # print('action')
+        self.calculate_ut()
+        # print(self.u_t)
+
+        # Step 4: calculate the value function at current iterate/time step
+        self.v_t = self.calculate_vt(self.phi)  # v_t = sum of self.phi[l] * self.zeta[l]
+        # print('v_t')
+        # print(self.v_t)
+
+        # Step 5: update the state of the system
+        self.update_state()
+        self.phi_next = self.update_phi()
+        pass
+
+    def update_controller(self):
+        # Step 7: Calculate the expected value for the next step
+        self.v_t_1 = self.calculate_vt(self.phi_next)  # self.phi[l] * self.zeta[l]
+        # print('v_t_1')
+        # print(self.v_t_1)
+        # Step 8: calculate the temporal difference
+        self.calculate_prediction_error()
+        # print('temporal_difference')
+        # print(self.temporal_difference)
+
+        # Step 9: update the actor and critic functions
+        self.update_zeta()  # update the critic
+        self.update_omega()  # update the actor
+        # print('weights w')
+        # print(self.omega)
+        # print('critic zeta')
+        # print(self.zeta)
+        self.phi = self.phi_next  # the rules that fire for the next iteration
